@@ -1,0 +1,68 @@
+project:
+  name: bettor_crm_ml
+  environment: dev
+  random_seed: 42
+  timezone: America/Sao_Paulo
+
+data:
+  source:
+    name: online_retail_ii
+    provider: uci_machine_learning_repository
+    url: https://archive.ics.uci.edu/dataset/502/online+retail+ii
+
+databricks:
+  catalog: workspace
+  schema: bettor_crm_ml_dev
+
+tables:
+  bronze:
+    online_retail_raw: bronze_online_retail_raw
+
+  silver:
+    transactions: silver_transactions
+
+  gold:
+    customer_features: gold_customer_features
+    modeling_base: gold_modeling_base
+
+  scoring:
+    reactivation_scores: reactivation_scores
+
+  monitoring:
+    job_health: monitoring_job_health
+    data_quality: monitoring_data_quality
+    score_distribution: monitoring_score_distribution
+    model_performance: monitoring_model_performance
+
+modeling:
+  customer_id_col: customer_id
+  reference_date_col: reference_date
+  target_col: target_reactivated_30d
+
+  inactive_days_threshold: 60
+  observation_window_days: 180
+  prediction_window_days: 30
+
+  split:
+    strategy: temporal
+    train_ratio: 0.70
+    validation_ratio: 0.15
+    test_ratio: 0.15
+
+metrics:
+  technical:
+    - roc_auc
+    - pr_auc
+    - precision
+    - recall
+    - f1
+
+  business:
+    - precision_at_top_10
+    - precision_at_top_20
+    - lift_at_top_10
+    - lift_at_top_20
+
+mlflow:
+  experiment_name: /Shared/bettor_crm_ml/dev/reactivation_30d
+  registered_model_name: bettor_crm_reactivation_30d_dev
