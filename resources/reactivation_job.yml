@@ -24,7 +24,7 @@ resources:
         - task_key: generate_synthetic_transactions
           description: Gera o próximo lote de transações sintéticas.
           notebook_task:
-            notebook_path: ../notebooks/06a_generate_synthetic_transactions
+            notebook_path: ../notebooks/06a_generate_synthetic_transactions.py
           timeout_seconds: 3600
           max_retries: 1
           min_retry_interval_millis: 60000
@@ -35,7 +35,7 @@ resources:
           depends_on:
             - task_key: generate_synthetic_transactions
           notebook_task:
-            notebook_path: ../notebooks/07_batch_scoring
+            notebook_path: ../notebooks/07_batch_scoring.py
           timeout_seconds: 3600
           max_retries: 1
           min_retry_interval_millis: 60000
@@ -46,7 +46,7 @@ resources:
           depends_on:
             - task_key: batch_scoring
           notebook_task:
-            notebook_path: ../notebooks/08_monitoring
+            notebook_path: ../notebooks/08_monitoring.py
           timeout_seconds: 3600
           max_retries: 1
           min_retry_interval_millis: 60000
@@ -57,7 +57,7 @@ resources:
           depends_on:
             - task_key: monitoring
           notebook_task:
-            notebook_path: ../notebooks/09_explainability
+            notebook_path: ../notebooks/09_explainability.py
           timeout_seconds: 3600
           max_retries: 1
           min_retry_interval_millis: 60000
