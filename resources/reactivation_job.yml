@@ -1,0 +1,64 @@
+resources:
+  jobs:
+    reactivation_customers_pipeline:
+      name: "[${bundle.target}] reactivation-customers-pipeline"
+
+      description: >
+        Pipeline operacional mensal para geração de dados sintéticos,
+        batch scoring, monitoramento e explicabilidade do modelo de
+        reativação de clientes.
+
+      max_concurrent_runs: 1
+      timeout_seconds: 14400
+
+      schedule:
+        quartz_cron_expression: "0 0 9 8 * ?"
+        timezone_id: America/Sao_Paulo
+        pause_status: PAUSED
+
+      tags:
+        project: reactivation-customers-model
+        environment: ${bundle.target}
+
+      tasks:
+        - task_key: generate_synthetic_transactions
+          description: Gera o próximo lote de transações sintéticas.
+          notebook_task:
+            notebook_path: ../notebooks/06a_generate_synthetic_transactions
+          timeout_seconds: 3600
+          max_retries: 1
+          min_retry_interval_millis: 60000
+          retry_on_timeout: true
+
+        - task_key: batch_scoring
+          description: Gera o ranking mensal de clientes elegíveis.
+          depends_on:
+            - task_key: generate_synthetic_transactions
+          notebook_task:
+            notebook_path: ../notebooks/07_batch_scoring
+          timeout_seconds: 3600
+          max_retries: 1
+          min_retry_interval_millis: 60000
+          retry_on_timeout: true
+
+        - task_key: monitoring
+          description: Calcula qualidade dos dados, drift e métricas operacionais.
+          depends_on:
+            - task_key: batch_scoring
+          notebook_task:
+            notebook_path: ../notebooks/08_monitoring
+          timeout_seconds: 3600
+          max_retries: 1
+          min_retry_interval_millis: 60000
+          retry_on_timeout: true
+
+        - task_key: explainability
+          description: Calcula explicabilidade global e local do modelo.
+          depends_on:
+            - task_key: monitoring
+          notebook_task:
+            notebook_path: ../notebooks/09_explainability
+          timeout_seconds: 3600
+          max_retries: 1
+          min_retry_interval_millis: 60000
+          retry_on_timeout: true
