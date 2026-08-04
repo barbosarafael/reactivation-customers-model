@@ -1538,3 +1538,5 @@ print(
     {LOCAL_OUTPUT_TABLE}
     """
 )
+
+# COMMAND ----------
