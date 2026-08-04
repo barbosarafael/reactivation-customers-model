@@ -1,4 +1,10 @@
 resources:
+  dashboards:
+    reactivation_model:
+      display_name: Reactivation Model
+      file_path: ../dashboards/Reactivation Model.lvdash.json
+      warehouse_id: ${var.sql_warehouse_id}
+
   jobs:
     reactivation_customers_pipeline:
       name: "[${bundle.target}] reactivation-customers-pipeline"
@@ -62,3 +68,10 @@ resources:
           max_retries: 1
           min_retry_interval_millis: 60000
           retry_on_timeout: true
+
+        - task_key: refresh_reactivation_dashboard
+          description: Atualiza o dashboard com os resultados mais recentes do pipeline.
+          depends_on:
+            - task_key: explainability
+          dashboard_task:
+            dashboard_id: ${resources.dashboards.reactivation_model.id}
