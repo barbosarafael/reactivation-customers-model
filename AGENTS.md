@@ -9,7 +9,7 @@ simula reativacao de clientes/apostadores.
 
 O repositorio Git e a fonte de verdade. Desenvolva localmente e use Databricks
 para executar, validar e operar o pipeline. Nao edite artefatos somente no
-Databricks Workspace quando a alteracao tambem precisar existir no Git.
+Databricks Workspace quando a alteracao tambem precisar existir no Git
 
 ## Estrutura relevante
 
