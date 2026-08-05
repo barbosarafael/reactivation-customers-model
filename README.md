@@ -141,6 +141,9 @@ As features operacionais incluem recência (`inactive_days`), número de pedidos
 
 O modelo vencedor é registrado no MLflow Model Registry e consumido pelo alias `champion` no batch scoring. Métricas e a versão final do modelo devem ser preenchidas a partir da execução final no Workspace; não há valores inventados neste README.
 
+![alt text](docs/image3.png)
+
+
 ## Scoring, monitoramento e explicabilidade
 
 O batch scoring recalcula as features da população elegível, gera `reactivation_score`, ranking e grupos de prioridade `TOP_10`, `TOP_20`, `TOP_30` e `REMAINDER`. A persistência é controlada por `scoring_date` para que uma reexecução da mesma rodada substitua o resultado correspondente em vez de duplicá-lo.
@@ -148,6 +151,13 @@ O batch scoring recalcula as features da população elegível, gera `reactivati
 O monitoramento cobre qualidade de dados, volume, distribuição de scores, drift de features e scores por PSI, além de métricas de performance após a maturação da target. A explicabilidade usa contribuições nativas do XGBoost (`pred_contribs=True`) para gerar visões globais e locais.
 
 O dashboard nativo do Databricks é versionado em [`dashboards/Reactivation Model.lvdash.json`](dashboards/Reactivation%20Model.lvdash.json) e atualizado como última task do Job.
+
+### Dashboard 
+
+O único dashboard operacional oficial é o recurso implantado pelo Bundle. No target atual, executado em modo `development`, ele aparece no Workspace com um nome semelhante a `[dev <usuário>] Reactivation Model`. 
+
+![alt text](docs/image.png)
+![alt text](docs/image1.png)
 
 ## Databricks Asset Bundle e execução
 
@@ -176,34 +186,7 @@ O workflow em [`.github/workflows/databricks-bundle.yml`](.github/workflows/data
 
 Antes da release, `dev` deve ser sincronizada com `main`, pois é a branch usada para deploy. O fluxo final esperado é validar a mudança em `dev`, fazer o deploy final, promover `dev` para `main` e então criar a tag `v1.0.0`.
 
-## Estrutura do repositório
-
-```text
-conf/                     Configuração por ambiente
-dashboards/               Dashboard Databricks versionado
-docs/                     Contrato de negócio e documentação
-notebooks/                Exploração, treinamento e operação do pipeline
-resources/                Definição do Job no Bundle
-src/reactivation_model/   Helpers reutilizáveis de configuração e qualidade
-tests/                    Testes unitários locais
-```
-
-## Evidências de portfólio
-
-As evidências devem ser geradas a partir da rodada final e armazenadas em `docs/assets/portfolio/`, removendo IDs de clientes, URLs privadas, tokens e qualquer outro dado sensível. O conjunto máximo recomendado é:
-
-1. arquitetura ou fluxo do projeto;
-2. execução verde do Job;
-3. experimento e métricas no MLflow;
-4. modelo com alias `champion`;
-5. dashboard atualizado;
-6. GitHub Actions verde.
-
-## Limitações e trabalhos futuros
-
-O escopo da `v1.0.0` é educacional e batch. Itens como ambiente de produção, Model Serving, Feature Store, alertas complexos, promoção automática de modelos e avaliação com dados reais de campanha são evoluções futuras e não bloqueiam o encerramento desta versão.
-
-## Tecnologias
+## Stack
 
 - Python, PySpark e Delta Lake
 - Databricks, Databricks Asset Bundles e Databricks Jobs
