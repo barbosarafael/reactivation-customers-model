@@ -1,0 +1,1355 @@
+{
+  "datasets": [
+    {
+      "name": "latest_summary",
+      "displayName": "latest_summary",
+      "queryLines": [
+        "SELECT\n",
+        "          CAST(scoring_date AS STRING) AS latest_scoring_date,\n",
+        "          CAST(overall_status AS STRING) AS overall_status,\n",
+        "          CAST(number_customers AS BIGINT) AS number_customers,\n",
+        "          CAST(score_mean AS DOUBLE) AS score_mean,\n",
+        "          CAST(predicted_positive_rate AS DOUBLE) AS predicted_positive_rate,\n",
+        "          CAST(maximum_feature_psi AS DOUBLE) AS maximum_feature_psi,\n",
+        "          CAST(model_version AS STRING) AS model_version,\n",
+        "          CAST(target_status AS STRING) AS target_status,\n",
+        "          CAST(scenario AS STRING) AS scenario\n",
+        "        FROM workspace.monitoring_layer.model_monitoring_summary\n",
+        "        ORDER BY scoring_date DESC\n",
+        "        LIMIT 1\n"
+      ]
+    },
+    {
+      "name": "population_trend",
+      "displayName": "population_trend",
+      "queryLines": [
+        "SELECT\n",
+        "          scoring_date,\n",
+        "          CAST(number_customers AS BIGINT) AS number_customers\n",
+        "        FROM workspace.monitoring_layer.model_monitoring_summary\n",
+        "        ORDER BY scoring_date\n"
+      ]
+    },
+    {
+      "name": "score_trend",
+      "displayName": "score_trend",
+      "queryLines": [
+        "SELECT\n",
+        "          scoring_date,\n",
+        "          'Score médio' AS metric_name,\n",
+        "          CAST(score_mean AS DOUBLE) AS metric_value\n",
+        "        FROM workspace.monitoring_layer.model_monitoring_summary\n",
+        "\n",
+        "        UNION ALL\n",
+        "\n",
+        "        SELECT\n",
+        "          scoring_date,\n",
+        "          'Score mediano' AS metric_name,\n",
+        "          CAST(score_median AS DOUBLE) AS metric_value\n",
+        "        FROM workspace.monitoring_layer.model_monitoring_summary\n",
+        "\n",
+        "        UNION ALL\n",
+        "\n",
+        "        SELECT\n",
+        "          scoring_date,\n",
+        "          'Percentil 90' AS metric_name,\n",
+        "          CAST(score_p90 AS DOUBLE) AS metric_value\n",
+        "        FROM workspace.monitoring_layer.model_monitoring_summary\n"
+      ]
+    },
+    {
+      "name": "latest_score_distribution",
+      "displayName": "latest_score_distribution",
+      "queryLines": [
+        "SELECT\n",
+        "          CAST(\n",
+        "            FLOOR(\n",
+        "              CAST(reactivation_probability AS DOUBLE) * 20\n",
+        "            ) / 20\n",
+        "            AS DOUBLE\n",
+        "          ) AS score_bin,\n",
+        "          COUNT(*) AS number_customers\n",
+        "        FROM workspace.gold_layer.customer_reactivation_scoring\n",
+        "        WHERE scoring_date = (\n",
+        "          SELECT MAX(scoring_date)\n",
+        "          FROM workspace.gold_layer.customer_reactivation_scoring\n",
+        "        )\n",
+        "        GROUP BY\n",
+        "          CAST(\n",
+        "            FLOOR(\n",
+        "              CAST(reactivation_probability AS DOUBLE) * 20\n",
+        "            ) / 20\n",
+        "            AS DOUBLE\n",
+        "          )\n",
+        "        ORDER BY score_bin\n"
+      ]
+    },
+    {
+      "name": "priority_groups",
+      "displayName": "priority_groups",
+      "queryLines": [
+        "SELECT\n",
+        "          scoring_date,\n",
+        "          'TOP_10' AS priority_group,\n",
+        "          CAST(top_10_customers AS BIGINT) AS number_customers\n",
+        "        FROM workspace.monitoring_layer.model_monitoring_summary\n",
+        "\n",
+        "        UNION ALL\n",
+        "\n",
+        "        SELECT\n",
+        "          scoring_date,\n",
+        "          'TOP_20' AS priority_group,\n",
+        "          CAST(top_20_customers AS BIGINT) AS number_customers\n",
+        "        FROM workspace.monitoring_layer.model_monitoring_summary\n",
+        "\n",
+        "        UNION ALL\n",
+        "\n",
+        "        SELECT\n",
+        "          scoring_date,\n",
+        "          'TOP_30' AS priority_group,\n",
+        "          CAST(top_30_customers AS BIGINT) AS number_customers\n",
+        "        FROM workspace.monitoring_layer.model_monitoring_summary\n",
+        "\n",
+        "        UNION ALL\n",
+        "\n",
+        "        SELECT\n",
+        "          scoring_date,\n",
+        "          'REMAINDER' AS priority_group,\n",
+        "          CAST(remainder_customers AS BIGINT) AS number_customers\n",
+        "        FROM workspace.monitoring_layer.model_monitoring_summary\n"
+      ]
+    },
+    {
+      "name": "latest_feature_psi",
+      "displayName": "latest_feature_psi",
+      "queryLines": [
+        "SELECT\n",
+        "          CAST(feature_name AS STRING) AS feature_name,\n",
+        "          CAST(psi AS DOUBLE) AS psi,\n",
+        "          CAST(status AS STRING) AS status\n",
+        "        FROM workspace.monitoring_layer.feature_monitoring\n",
+        "        WHERE scoring_date = (\n",
+        "          SELECT MAX(scoring_date)\n",
+        "          FROM workspace.monitoring_layer.feature_monitoring\n",
+        "        )\n",
+        "        ORDER BY psi DESC\n"
+      ]
+    },
+    {
+      "name": "drift_trend",
+      "displayName": "drift_trend",
+      "queryLines": [
+        "SELECT\n",
+        "          scoring_date,\n",
+        "          'Maior PSI de feature' AS drift_name,\n",
+        "          CAST(maximum_feature_psi AS DOUBLE) AS psi\n",
+        "        FROM workspace.monitoring_layer.model_monitoring_summary\n",
+        "\n",
+        "        UNION ALL\n",
+        "\n",
+        "        SELECT\n",
+        "          scoring_date,\n",
+        "          'PSI dos scores' AS drift_name,\n",
+        "          CAST(score_psi AS DOUBLE) AS psi\n",
+        "        FROM workspace.monitoring_layer.model_monitoring_summary\n"
+      ]
+    },
+    {
+      "name": "data_quality",
+      "displayName": "data_quality",
+      "queryLines": [
+        "SELECT\n",
+        "          CAST(scoring_date AS STRING) AS scoring_date,\n",
+        "          CAST(scenario AS STRING) AS scenario,\n",
+        "          CAST(batch_rows AS STRING) AS batch_rows,\n",
+        "          CAST(null_rows AS STRING) AS null_rows,\n",
+        "          CAST(duplicate_rows AS STRING) AS duplicate_rows,\n",
+        "          CAST(invalid_price_rows AS STRING) AS invalid_price_rows,\n",
+        "          CAST(invalid_quantity_rows AS STRING) AS invalid_quantity_rows,\n",
+        "          CAST(dq_status AS STRING) AS dq_status,\n",
+        "          CAST(overall_status AS STRING) AS overall_status\n",
+        "        FROM workspace.monitoring_layer.model_monitoring_summary\n",
+        "        ORDER BY scoring_date DESC\n"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "modelMonitoring",
+      "displayName": "Monitoramento do Modelo",
+      "layout": [
+        {
+          "widget": {
+            "name": "dashboardHeader",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# Monitoramento do modelo de reativação\n",
+                "Saúde operacional, comportamento dos scores, população elegível e drift.\n"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "latestScoringDate",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "latest_summary",
+                  "fields": [
+                    {
+                      "name": "latest_scoring_date",
+                      "expression": "`latest_scoring_date`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "target": {
+                  "displayName": "latest_scoring_date",
+                  "fieldName": "latest_scoring_date"
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "Última scoring date"
+              },
+              "version": 2,
+              "widgetType": "counter"
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "overallStatus",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "latest_summary",
+                  "fields": [
+                    {
+                      "name": "overall_status",
+                      "expression": "`overall_status`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "Status geral"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "target": {
+                  "fieldName": "overall_status",
+                  "displayName": "overall_status"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 1,
+            "y": 2,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "eligibleCustomers",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "latest_summary",
+                  "fields": [
+                    {
+                      "name": "number_customers",
+                      "expression": "`number_customers`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "target": {
+                  "displayName": "number_customers",
+                  "fieldName": "number_customers"
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "Clientes elegíveis"
+              },
+              "version": 2,
+              "widgetType": "counter"
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "averageScore",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "latest_summary",
+                  "fields": [
+                    {
+                      "name": "score_mean",
+                      "expression": "`score_mean`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "target": {
+                  "displayName": "score_mean",
+                  "fieldName": "score_mean"
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "Score médio"
+              },
+              "version": 2,
+              "widgetType": "counter"
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 2,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "predictedPositiveRate",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "latest_summary",
+                  "fields": [
+                    {
+                      "name": "predicted_positive_rate",
+                      "expression": "`predicted_positive_rate`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "target": {
+                  "displayName": "predicted_positive_rate",
+                  "fieldName": "predicted_positive_rate"
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "Taxa prevista positiva"
+              },
+              "version": 2,
+              "widgetType": "counter"
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "maximumFeaturePsi",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "latest_summary",
+                  "fields": [
+                    {
+                      "name": "maximum_feature_psi",
+                      "expression": "`maximum_feature_psi`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "target": {
+                  "displayName": "maximum_feature_psi",
+                  "fieldName": "maximum_feature_psi"
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "Maior PSI"
+              },
+              "version": 2,
+              "widgetType": "counter"
+            }
+          },
+          "position": {
+            "x": 5,
+            "y": 2,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "modelVersion",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "latest_summary",
+                  "fields": [
+                    {
+                      "name": "model_version",
+                      "expression": "`model_version`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "target": {
+                  "displayName": "model_version",
+                  "fieldName": "model_version"
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "Versão do modelo"
+              },
+              "version": 2,
+              "widgetType": "counter"
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "targetStatus",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "latest_summary",
+                  "fields": [
+                    {
+                      "name": "target_status",
+                      "expression": "`target_status`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "target": {
+                  "displayName": "target_status",
+                  "fieldName": "target_status"
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "Status da target"
+              },
+              "version": 2,
+              "widgetType": "counter"
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 4,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "syntheticScenario",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "latest_summary",
+                  "fields": [
+                    {
+                      "name": "scenario",
+                      "expression": "`scenario`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "target": {
+                  "displayName": "scenario",
+                  "fieldName": "scenario"
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "Cenário sintético"
+              },
+              "version": 2,
+              "widgetType": "counter"
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 4,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "eligiblePopulationTrend",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "population_trend",
+                  "fields": [
+                    {
+                      "name": "scoring_date",
+                      "expression": "`scoring_date`"
+                    },
+                    {
+                      "name": "sum(number_customers)",
+                      "expression": "SUM(`number_customers`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "x": {
+                  "axis": {
+                    "title": "Scoring date"
+                  },
+                  "displayName": "Scoring date",
+                  "fieldName": "scoring_date",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "axis": {
+                    "title": "Clientes"
+                  },
+                  "displayName": "Clientes",
+                  "fieldName": "sum(number_customers)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "Evolução da população elegível"
+              },
+              "version": 3,
+              "widgetType": "bar"
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "scoreTrend",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "score_trend",
+                  "fields": [
+                    {
+                      "name": "scoring_date",
+                      "expression": "`scoring_date`"
+                    },
+                    {
+                      "name": "metric_name",
+                      "expression": "`metric_name`"
+                    },
+                    {
+                      "name": "sum(metric_value)",
+                      "expression": "SUM(`metric_value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "x": {
+                  "axis": {
+                    "title": "Scoring date"
+                  },
+                  "displayName": "Scoring date",
+                  "fieldName": "scoring_date",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "axis": {
+                    "title": "Score"
+                  },
+                  "displayName": "Score",
+                  "fieldName": "sum(metric_value)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "displayName": "metric_name",
+                  "fieldName": "metric_name",
+                  "legend": {
+                    "position": "right",
+                    "title": "metric_name"
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "Evolução dos scores"
+              },
+              "version": 3,
+              "widgetType": "bar"
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 6,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "latestScoreDistribution",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "latest_score_distribution",
+                  "fields": [
+                    {
+                      "name": "score_bin",
+                      "expression": "`score_bin`"
+                    },
+                    {
+                      "name": "sum(number_customers)",
+                      "expression": "SUM(`number_customers`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "x": {
+                  "axis": {
+                    "title": "Faixa de score"
+                  },
+                  "displayName": "Faixa de score",
+                  "fieldName": "score_bin",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "axis": {
+                    "title": "Clientes"
+                  },
+                  "displayName": "Clientes",
+                  "fieldName": "sum(number_customers)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "Distribuição dos scores da última rodada"
+              },
+              "version": 3,
+              "widgetType": "bar"
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "priorityGroupTrend",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "priority_groups",
+                  "fields": [
+                    {
+                      "name": "scoring_date",
+                      "expression": "`scoring_date`"
+                    },
+                    {
+                      "name": "priority_group",
+                      "expression": "`priority_group`"
+                    },
+                    {
+                      "name": "sum(number_customers)",
+                      "expression": "SUM(`number_customers`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "x": {
+                  "axis": {
+                    "title": "Scoring date"
+                  },
+                  "displayName": "Scoring date",
+                  "fieldName": "scoring_date",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "axis": {
+                    "title": "Clientes"
+                  },
+                  "displayName": "Clientes",
+                  "fieldName": "sum(number_customers)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "displayName": "priority_group",
+                  "fieldName": "priority_group",
+                  "legend": {
+                    "position": "right",
+                    "title": "priority_group"
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "Grupos de prioridade por rodada"
+              },
+              "version": 3,
+              "widgetType": "bar"
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 12,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "latestFeaturePsi",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "latest_feature_psi",
+                  "fields": [
+                    {
+                      "name": "feature_name",
+                      "expression": "`feature_name`"
+                    },
+                    {
+                      "name": "status",
+                      "expression": "`status`"
+                    },
+                    {
+                      "name": "max(psi)",
+                      "expression": "MAX(`psi`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "x": {
+                  "axis": {
+                    "title": "PSI"
+                  },
+                  "displayName": "PSI",
+                  "fieldName": "max(psi)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "axis": {
+                    "title": "Feature"
+                  },
+                  "displayName": "Feature",
+                  "fieldName": "feature_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "color": {
+                  "displayName": "status",
+                  "fieldName": "status",
+                  "legend": {
+                    "position": "right",
+                    "title": "status"
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "PSI por feature na última rodada"
+              },
+              "version": 3,
+              "widgetType": "bar"
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 18,
+            "width": 3,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "driftTrend",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "drift_trend",
+                  "fields": [
+                    {
+                      "name": "scoring_date",
+                      "expression": "`scoring_date`"
+                    },
+                    {
+                      "name": "drift_name",
+                      "expression": "`drift_name`"
+                    },
+                    {
+                      "name": "sum(psi)",
+                      "expression": "SUM(`psi`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "x": {
+                  "axis": {
+                    "title": "Scoring date"
+                  },
+                  "displayName": "Scoring date",
+                  "fieldName": "scoring_date",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "axis": {
+                    "title": "PSI"
+                  },
+                  "displayName": "PSI",
+                  "fieldName": "sum(psi)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "displayName": "drift_name",
+                  "fieldName": "drift_name",
+                  "legend": {
+                    "position": "right",
+                    "title": "drift_name"
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "Evolução do drift"
+              },
+              "version": 3,
+              "widgetType": "bar"
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 18,
+            "width": 3,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "dataQualityTable",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "data_quality",
+                  "fields": [
+                    {
+                      "name": "scoring_date",
+                      "expression": "`scoring_date`"
+                    },
+                    {
+                      "name": "scenario",
+                      "expression": "`scenario`"
+                    },
+                    {
+                      "name": "batch_rows",
+                      "expression": "`batch_rows`"
+                    },
+                    {
+                      "name": "null_rows",
+                      "expression": "`null_rows`"
+                    },
+                    {
+                      "name": "duplicate_rows",
+                      "expression": "`duplicate_rows`"
+                    },
+                    {
+                      "name": "invalid_price_rows",
+                      "expression": "`invalid_price_rows`"
+                    },
+                    {
+                      "name": "invalid_quantity_rows",
+                      "expression": "`invalid_quantity_rows`"
+                    },
+                    {
+                      "name": "dq_status",
+                      "expression": "`dq_status`"
+                    },
+                    {
+                      "name": "overall_status",
+                      "expression": "`overall_status`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "allowHTMLByDefault": false,
+              "condensed": false,
+              "encodings": {
+                "columns": [
+                  {
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "displayAs": "string",
+                    "displayName": "Scoring date",
+                    "fieldName": "scoring_date",
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "order": 10000,
+                    "preserveWhitespace": false,
+                    "title": "Scoring date",
+                    "type": "string",
+                    "useMonospaceFont": false,
+                    "visible": true
+                  },
+                  {
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "displayAs": "string",
+                    "displayName": "Cenário",
+                    "fieldName": "scenario",
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "order": 10001,
+                    "preserveWhitespace": false,
+                    "title": "Cenário",
+                    "type": "string",
+                    "useMonospaceFont": false,
+                    "visible": true
+                  },
+                  {
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "displayAs": "string",
+                    "displayName": "Linhas",
+                    "fieldName": "batch_rows",
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "order": 10002,
+                    "preserveWhitespace": false,
+                    "title": "Linhas",
+                    "type": "string",
+                    "useMonospaceFont": false,
+                    "visible": true
+                  },
+                  {
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "displayAs": "string",
+                    "displayName": "Nulos",
+                    "fieldName": "null_rows",
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "order": 10003,
+                    "preserveWhitespace": false,
+                    "title": "Nulos",
+                    "type": "string",
+                    "useMonospaceFont": false,
+                    "visible": true
+                  },
+                  {
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "displayAs": "string",
+                    "displayName": "Duplicidades",
+                    "fieldName": "duplicate_rows",
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "order": 10004,
+                    "preserveWhitespace": false,
+                    "title": "Duplicidades",
+                    "type": "string",
+                    "useMonospaceFont": false,
+                    "visible": true
+                  },
+                  {
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "displayAs": "string",
+                    "displayName": "Preços inválidos",
+                    "fieldName": "invalid_price_rows",
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "order": 10005,
+                    "preserveWhitespace": false,
+                    "title": "Preços inválidos",
+                    "type": "string",
+                    "useMonospaceFont": false,
+                    "visible": true
+                  },
+                  {
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "displayAs": "string",
+                    "displayName": "Quantidades inválidas",
+                    "fieldName": "invalid_quantity_rows",
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "order": 10006,
+                    "preserveWhitespace": false,
+                    "title": "Quantidades inválidas",
+                    "type": "string",
+                    "useMonospaceFont": false,
+                    "visible": true
+                  },
+                  {
+                    "alignContent": "center",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "displayAs": "string",
+                    "displayName": "Data Quality",
+                    "fieldName": "dq_status",
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "order": 10007,
+                    "preserveWhitespace": false,
+                    "title": "Data Quality",
+                    "type": "string",
+                    "useMonospaceFont": false,
+                    "visible": true
+                  },
+                  {
+                    "alignContent": "center",
+                    "allowHTML": false,
+                    "allowSearch": true,
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "dateTimeFormat": "YYYY-MM-DD",
+                    "displayAs": "string",
+                    "displayName": "Status geral",
+                    "fieldName": "overall_status",
+                    "highlightLinks": false,
+                    "imageHeight": "",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "linkOpenInNewTab": true,
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "order": 10008,
+                    "preserveWhitespace": false,
+                    "title": "Status geral",
+                    "type": "string",
+                    "useMonospaceFont": false,
+                    "visible": true
+                  }
+                ]
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "Qualidade dos dados por rodada"
+              },
+              "invisibleColumns": [],
+              "itemsPerPage": 25,
+              "paginationSize": "default",
+              "version": 1,
+              "widgetType": "table",
+              "withRowNumber": false
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 25,
+            "width": 6,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "dashboardFooter",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### Leitura dos indicadores\n",
+                "- PSI menor que `0,10`: estável.\n",
+                "- PSI entre `0,10` e `0,25`: atenção.\n",
+                "- PSI maior ou igual a `0,25`: crítico.\n",
+                "- A performance sintética foi removida desta versão porque a tabela só é criada após existir uma rodada com target madura. Isso evita erro de schema enquanto a tabela ainda não existe.\n"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 33,
+            "width": 6,
+            "height": 4
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}
