@@ -25,6 +25,8 @@
 # COMMAND ----------
 
 from datetime import datetime
+from pathlib import Path
+import sys
 
 import mlflow
 import numpy as np
@@ -41,14 +43,31 @@ from pyspark.sql.functions import *
 
 # COMMAND ----------
 
-HISTORY_TABLE = "workspace.synthetic_layer." "online_retail_transactions_full"
-OUTPUT_TABLE = "workspace.gold_layer." "customer_reactivation_scoring"
-SNAPSHOT_FEATURES_TABLE = "workspace.gold_layer.customer_reactivation_feature_snapshot"
-REGISTERED_MODEL_NAME = "workspace.default." "reactivation_customers_model"
+current_path = Path.cwd()
+project_root = current_path.parent if current_path.name == "notebooks" else current_path
+src_path = project_root / "src"
 
-MODEL_ALIAS = "champion"
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
 
-INACTIVITY_DAYS = 60
+from reactivation_model.config import (
+    get_model_alias,
+    get_modeling_param,
+    get_registered_model_name,
+    get_table_name,
+    load_config,
+)
+
+config = load_config("dev")
+
+HISTORY_TABLE = get_table_name(config, "synthetic", "full_history")
+OUTPUT_TABLE = get_table_name(config, "gold", "reactivation_scores")
+SNAPSHOT_FEATURES_TABLE = get_table_name(config, "gold", "feature_snapshot")
+REGISTERED_MODEL_NAME = get_registered_model_name(config)
+
+MODEL_ALIAS = get_model_alias(config)
+
+INACTIVITY_DAYS = get_modeling_param(config, "inactive_days_threshold")
 PREDICTION_THRESHOLD = 0.50
 
 FEATURE_COLUMNS = [
@@ -839,4 +858,4 @@ print(
 
 # MAGIC %sql 
 # MAGIC
-# MAGIC select * from workspace.gold_layer.customer_reactivation_scoring
+# MAGIC -- Consulte a tabela configurada em OUTPUT_TABLE para inspecionar a rodada.

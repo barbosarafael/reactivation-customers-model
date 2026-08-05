@@ -1,5 +1,5 @@
 project:
-  name: bettor_crm_ml
+  name: reactivation_customers_model
   environment: dev
   random_seed: 42
   timezone: America/Sao_Paulo
@@ -12,27 +12,45 @@ data:
 
 databricks:
   catalog: workspace
-  schema: bettor_crm_ml_dev
+  # Schema padrão para helpers sem camada explícita.
+  schema: gold_layer
+
+# Contrato confirmado no Workspace em 2026-08-04. As tabelas operacionais são
+# distribuídas por schemas de camada, e não por um único schema de projeto.
+schemas:
+  bronze: bronze_layer
+  silver: silver_layer
+  gold: gold_layer
+  synthetic: synthetic_layer
+  monitoring: monitoring_layer
+  explainability: explainability_layer
 
 tables:
   bronze:
-    online_retail_raw: bronze_online_retail_raw
+    online_retail_i: online_retail_i
+    online_retail_ii: online_retail_ii
 
   silver:
-    transactions: silver_transactions
+    transactions: online_retail_transactions
 
   gold:
-    customer_features: gold_customer_features
-    modeling_base: gold_modeling_base
+    modeling: customer_reactivation_modeling
+    feature_snapshot: customer_reactivation_feature_snapshot
+    reactivation_scores: customer_reactivation_scoring
 
-  scoring:
-    reactivation_scores: reactivation_scores
+  synthetic:
+    transactions: online_retail_transactions
+    generation_runs: generation_runs
+    full_history: online_retail_transactions_full
 
   monitoring:
-    job_health: monitoring_job_health
-    data_quality: monitoring_data_quality
-    score_distribution: monitoring_score_distribution
-    model_performance: monitoring_model_performance
+    summary: model_monitoring_summary
+    feature_monitoring: feature_monitoring
+    performance: performance_monitoring
+
+  explainability:
+    global_feature_importance: global_feature_importance
+    local_feature_contributions: local_feature_contributions
 
 modeling:
   customer_id_col: customer_id
@@ -65,4 +83,5 @@ metrics:
 
 mlflow:
   experiment_name: /Shared/bettor_crm_ml/dev/reactivation_30d
-  registered_model_name: bettor_crm_reactivation_30d_dev
+  registered_model_name: workspace.default.reactivation_customers_model
+  model_alias: champion
