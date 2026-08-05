@@ -25,6 +25,8 @@
 
 from datetime import datetime, timedelta
 import math
+from pathlib import Path
+import sys
 
 import numpy as np
 import pandas as pd
@@ -50,15 +52,31 @@ from pyspark.sql.functions import (
 
 # COMMAND ----------
 
-SOURCE_TABLE = "workspace.silver_layer.online_retail_transactions"
+current_path = Path.cwd()
+project_root = current_path.parent if current_path.name == "notebooks" else current_path
+src_path = project_root / "src"
 
-SYNTHETIC_SCHEMA = "workspace.synthetic_layer"
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
 
-OUTPUT_TABLE = "workspace.synthetic_layer." "online_retail_transactions"
+from reactivation_model.config import (
+    get_full_schema_name,
+    get_table_name,
+    load_config,
+)
+from reactivation_model.synthetic_data import consolidate_product_catalog
 
-MANIFEST_TABLE = "workspace.synthetic_layer." "generation_runs"
+config = load_config("dev")
 
-FULL_HISTORY_VIEW = "workspace.synthetic_layer." "online_retail_transactions_full"
+SOURCE_TABLE = get_table_name(config, "silver", "transactions")
+
+SYNTHETIC_SCHEMA = get_full_schema_name(config, "synthetic")
+
+OUTPUT_TABLE = get_table_name(config, "synthetic", "transactions")
+
+MANIFEST_TABLE = get_table_name(config, "synthetic", "generation_runs")
+
+FULL_HISTORY_VIEW = get_table_name(config, "synthetic", "full_history")
 
 BASE_COLUMNS = [
     "invoice",
@@ -559,8 +577,10 @@ product_catalog_df = (
 # COMMAND ----------
 
 product_catalog_pandas = (
-    product_catalog_df
-    .toPandas()
+    consolidate_product_catalog(
+        product_catalog_df
+        .toPandas()
+    )
 )
 
 # COMMAND ----------
