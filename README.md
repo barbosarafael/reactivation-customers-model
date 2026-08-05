@@ -2,7 +2,80 @@
 
 Projeto end-to-end de dados e Machine Learning no Databricks para priorizar clientes inativos com maior probabilidade de realizar uma nova compra nos próximos 30 dias.
 
-**Status:** encerramento da versão `v1.0.0` em andamento. O código, Bundle, Job e dashboard estão versionados. Em 2026-08-04, o deploy no target `dev` e a execução end-to-end do Job concluíram com sucesso; faltam apenas a promoção Git/GitHub, as evidências curadas e a release formal.
+## Comece aqui: reproduzir no Databricks Free Edition
+
+**É possível reproduzir este projeto para estudo no Databricks Free Edition**, mas ele não é um projeto de "clone, deploy e execute" ainda. A Free Edition oferece compute serverless, Jobs e um SQL Warehouse pequeno, que são suficientes para este caso educacional. Há cotas de uso e acesso limitado à internet; se o download da UCI não funcionar dentro do workspace, baixe o arquivo no seu computador e faça upload para o Databricks. Consulte as [características da Free Edition](https://docs.databricks.com/aws/en/getting-started/free-edition) e suas [limitações atuais](https://docs.databricks.com/aws/en/getting-started/free-edition-limitations) antes de começar.
+
+> Este projeto usa dados públicos e é destinado a estudo. Não envie dados de clientes, credenciais ou outros dados sensíveis para uma conta Free Edition.
+
+### O que você precisa ter
+
+1. Uma conta no [Databricks Free Edition](https://docs.databricks.com/aws/en/getting-started/free-edition) e acesso ao seu workspace.
+2. Git e Python instalados na sua máquina para clonar o repositório e executar os testes locais.
+3. A Databricks CLI instalada e autenticada no **seu** workspace. A autenticação interativa pode ser feita com:
+
+   ```bash
+   databricks auth login --host https://<url-do-seu-workspace>
+   ```
+
+   Substitua o valor entre `<...>` pela URL exibida no navegador ao abrir seu workspace. Esse comando abre o login no navegador; não crie nem cole tokens no repositório. Veja a [documentação de autenticação da CLI](https://docs.databricks.com/aws/en/dev-tools/cli/authentication).
+
+4. Um SQL Warehouse iniciado no seu workspace. A Free Edition permite um Warehouse de até `2X-Small`; ele é necessário somente para publicar e atualizar o dashboard.
+
+### Entenda o que é específico de cada workspace
+
+O repositório contém valores que funcionam no workspace em que ele foi desenvolvido, mas **não** no seu automaticamente:
+
+- o `host` e o `sql_warehouse_id` em `databricks.yml`;
+- os objetos do catálogo `workspace`, como `workspace.bronze_layer` e `workspace.gold_layer`;
+- o experimento MLflow, o modelo registrado e seu alias `champion`.
+
+Antes de fazer deploy, altere em sua cópia local de `databricks.yml` a URL para a do seu workspace e defina `sql_warehouse_id` com o ID do seu SQL Warehouse. Não reutilize o ID já presente no repositório: ele pertence a outro ambiente. Não envie essas adaptações pessoais em um Pull Request.
+
+### Caminho de execução recomendado
+
+Faça a primeira rodada manualmente. Ela ensina as dependências do pipeline e deixa mais fácil localizar um erro do que executar o Job completo de uma vez.
+
+1. Clone o repositório e execute os testes Python puros:
+
+   ```bash
+   python -m pip install "pytest>=8.0.0" "PyYAML>=6.0.0"
+   PYTHONPATH=src python -m pytest -q
+   ```
+
+2. Baixe o [Online Retail II](https://archive.ics.uci.edu/dataset/502/online+retail+ii). Crie no seu workspace as tabelas Delta de entrada `workspace.bronze_layer.online_retail_i` e `workspace.bronze_layer.online_retail_ii`, com os dados das duas partes do dataset. Este repositório ainda não possui um notebook de ingestão Bronze: esta é uma preparação manual obrigatória para a primeira execução.
+
+3. Importe ou abra os notebooks no workspace e execute-os nesta ordem:
+
+   ```text
+   00_setup
+   01_transform_silver_layer
+   03_create_modeling_base
+   04_train_baseline
+   05_train_model
+   06_register_best_model
+   ```
+
+   O notebook `02_exploratory_analysis` é opcional. Os seis passos acima criam a camada Silver, a base de modelagem, os experimentos MLflow e, por fim, o modelo com alias `champion`. Não pule o último passo: o batch scoring depende desse alias.
+
+4. Só depois que o treinamento manual tiver terminado, valide e publique o Bundle:
+
+   ```bash
+   databricks bundle validate -t dev
+   databricks bundle deploy -t dev
+   databricks bundle run reactivation_customers_pipeline -t dev
+   ```
+
+   Um Bundle é a definição versionada dos recursos do Databricks. Neste projeto, ele publica o Job e o dashboard; o Job executa a operação recorrente de geração sintética, scoring, monitoramento e explicabilidade. A CLI valida a configuração antes do deploy e executa o código usando a identidade autenticada. Veja o [guia oficial de Bundles](https://docs.databricks.com/aws/en/dev-tools/bundles/work-tasks).
+
+### Se algo falhar
+
+- **Tabela Bronze não encontrada:** volte ao passo 2. O notebook `01_transform_silver_layer` espera as duas tabelas Bronze já criadas.
+- **Modelo ou alias `champion` não encontrado:** execute os notebooks de treino e `06_register_best_model` antes do Job.
+- **Erro de Warehouse ou dashboard:** confira se o Warehouse existe, está iniciado e se o ID em `databricks.yml` é o seu. Como alternativa de estudo, execute os notebooks operacionais sem publicar o dashboard.
+- **Quota de compute atingida:** aguarde a renovação da quota da Free Edition e retome do passo que falhou. As cotas são uma limitação normal desse ambiente, não um erro do código.
+
+Depois da primeira execução, consulte a seção [Databricks Asset Bundle e execução](#databricks-asset-bundle-e-execução) para o fluxo operacional e de desenvolvimento.
 
 ## Objetivo de negócio
 
