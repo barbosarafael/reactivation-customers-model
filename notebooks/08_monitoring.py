@@ -20,6 +20,8 @@
 # COMMAND ----------
 
 from datetime import datetime, timedelta
+from pathlib import Path
+import sys
 
 import numpy as np
 import pandas as pd
@@ -40,42 +42,29 @@ from pyspark.sql.functions import *
 
 # COMMAND ----------
 
-HISTORY_TABLE = (
-    "workspace.synthetic_layer."
-    "online_retail_transactions_full"
+current_path = Path.cwd()
+project_root = current_path.parent if current_path.name == "notebooks" else current_path
+src_path = project_root / "src"
+
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
+
+from reactivation_model.config import (
+    get_full_schema_name,
+    get_table_name,
+    load_config,
 )
 
-GENERATION_RUNS_TABLE = (
-    "workspace.synthetic_layer."
-    "generation_runs"
-)
+config = load_config("dev")
 
-SCORING_TABLE = (
-    "workspace.gold_layer."
-    "customer_reactivation_scoring"
-)
-
-MODELING_TABLE = (
-    "workspace.gold_layer."
-    "customer_reactivation_modeling"
-)
-
-MONITORING_SCHEMA = "workspace.monitoring_layer"
-
-SUMMARY_TABLE = (
-    "workspace.monitoring_layer."
-    "model_monitoring_summary"
-)
-
-FEATURE_MONITORING_TABLE = (
-    "workspace.monitoring_layer."
-    "feature_monitoring"
-)
-
-PERFORMANCE_TABLE = (
-    "workspace.monitoring_layer."
-    "performance_monitoring"
-)
+HISTORY_TABLE = get_table_name(config, "synthetic", "full_history")
+GENERATION_RUNS_TABLE = get_table_name(config, "synthetic", "generation_runs")
+SCORING_TABLE = get_table_name(config, "gold", "reactivation_scores")
+MODELING_TABLE = get_table_name(config, "gold", "modeling")
+MONITORING_SCHEMA = get_full_schema_name(config, "monitoring")
+SUMMARY_TABLE = get_table_name(config, "monitoring", "summary")
+FEATURE_MONITORING_TABLE = get_table_name(config, "monitoring", "feature_monitoring")
+PERFORMANCE_TABLE = get_table_name(config, "monitoring", "performance")
 
 REFERENCE_DATE = "2011-11-08"
 TARGET_WINDOW_DAYS = 30
@@ -1582,5 +1571,4 @@ print(
 )
 
 # COMMAND ----------
-
 

@@ -28,6 +28,8 @@
 # COMMAND ----------
 
 from datetime import datetime
+from pathlib import Path
+import sys
 
 import mlflow
 import numpy as np
@@ -46,31 +48,29 @@ from pyspark.sql.functions import *
 
 # COMMAND ----------
 
-SCORING_TABLE = (
-    "workspace.gold_layer."
-    "customer_reactivation_scoring"
+current_path = Path.cwd()
+project_root = current_path.parent if current_path.name == "notebooks" else current_path
+src_path = project_root / "src"
+
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
+
+from reactivation_model.config import (
+    get_full_schema_name,
+    get_model_alias,
+    get_registered_model_name,
+    get_table_name,
+    load_config,
 )
 
-REGISTERED_MODEL_NAME = (
-    "workspace.default."
-    "reactivation_customers_model"
-)
+config = load_config("dev")
 
-MODEL_ALIAS = "champion"
-
-EXPLAINABILITY_SCHEMA = (
-    "workspace.explainability_layer"
-)
-
-GLOBAL_OUTPUT_TABLE = (
-    "workspace.explainability_layer."
-    "global_feature_importance"
-)
-
-LOCAL_OUTPUT_TABLE = (
-    "workspace.explainability_layer."
-    "local_feature_contributions"
-)
+SCORING_TABLE = get_table_name(config, "gold", "reactivation_scores")
+REGISTERED_MODEL_NAME = get_registered_model_name(config)
+MODEL_ALIAS = get_model_alias(config)
+EXPLAINABILITY_SCHEMA = get_full_schema_name(config, "explainability")
+GLOBAL_OUTPUT_TABLE = get_table_name(config, "explainability", "global_feature_importance")
+LOCAL_OUTPUT_TABLE = get_table_name(config, "explainability", "local_feature_contributions")
 
 FEATURE_COLUMNS = [
     "inactive_days",

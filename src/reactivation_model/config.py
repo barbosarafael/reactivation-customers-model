@@ -107,9 +107,21 @@ def get_schema(config: dict[str, Any]) -> str:
     return config["databricks"]["schema"]
 
 
-def get_full_schema_name(config: dict[str, Any]) -> str:
-    """Return the fully qualified schema name: catalog.schema."""
-    return f"{get_catalog(config)}.{get_schema(config)}"
+def get_schema_for_layer(config: dict[str, Any], layer: str | None = None) -> str:
+    """Return the configured schema for a layer or the default project schema.
+
+    Operational tables can be distributed across Medallion and monitoring
+    schemas. When no layer is supplied, the project's default schema is used.
+    """
+    if layer is None:
+        return get_schema(config)
+
+    return config.get("schemas", {}).get(layer, get_schema(config))
+
+
+def get_full_schema_name(config: dict[str, Any], layer: str | None = None) -> str:
+    """Return a fully qualified schema name, optionally for a table layer."""
+    return f"{get_catalog(config)}.{get_schema_for_layer(config, layer)}"
 
 
 def get_table_name(config: dict[str, Any], layer: str, table_key: str) -> str:
@@ -120,16 +132,16 @@ def get_table_name(config: dict[str, Any], layer: str, table_key: str) -> str:
     config:
         Project config dictionary.
     layer:
-        Table group, for example `bronze`, `silver`, `gold`, `scoring` or
-        `monitoring`.
+        Table group, for example `bronze`, `silver`, `gold`, `synthetic`,
+        `monitoring` or `explainability`.
     table_key:
         Logical table key inside the selected group.
 
     Examples
     --------
     >>> config = load_config("dev")
-    >>> get_table_name(config, "bronze", "online_retail_raw")
-    'workspace.bettor_crm_ml_dev.bronze_online_retail_raw'
+    >>> get_table_name(config, "silver", "transactions")
+    'workspace.silver_layer.online_retail_transactions'
     """
     try:
         raw_table_name = config["tables"][layer][table_key]
@@ -143,7 +155,7 @@ def get_table_name(config: dict[str, Any], layer: str, table_key: str) -> str:
             f"Available tables in this layer: {available_tables}."
         ) from exc
 
-    return f"{get_full_schema_name(config)}.{raw_table_name}"
+    return f"{get_full_schema_name(config, layer)}.{raw_table_name}"
 
 
 def get_modeling_param(config: dict[str, Any], key: str) -> Any:
@@ -168,6 +180,11 @@ def get_registered_model_name(config: dict[str, Any]) -> str:
     return config["mlflow"]["registered_model_name"]
 
 
+def get_model_alias(config: dict[str, Any]) -> str:
+    """Return the registered-model alias used for operational inference."""
+    return config["mlflow"]["model_alias"]
+
+
 def summarize_config(config: dict[str, Any]) -> dict[str, Any]:
     """Return a compact summary useful for setup notebooks and logs."""
     return {
@@ -176,8 +193,11 @@ def summarize_config(config: dict[str, Any]) -> dict[str, Any]:
         "catalog": get_catalog(config),
         "schema": get_schema(config),
         "full_schema_name": get_full_schema_name(config),
+        "operational_schemas": config.get("schemas", {}),
         "inactive_days_threshold": config["modeling"]["inactive_days_threshold"],
         "observation_window_days": config["modeling"]["observation_window_days"],
         "prediction_window_days": config["modeling"]["prediction_window_days"],
         "mlflow_experiment_name": get_mlflow_experiment_name(config),
+        "registered_model_name": get_registered_model_name(config),
+        "model_alias": get_model_alias(config),
     }
